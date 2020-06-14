@@ -6,7 +6,7 @@ Cozy Point of Sales backend made in Deno, a new Javascript backend runtime based
 
 2. Create .env file
 ```sh
-PASSWORD=(generated password from GET /password)
+PASSWORD=(generated password from GET /generate)
 DB_HOST=
 DB_NAME=
 DB_USERNAME=
