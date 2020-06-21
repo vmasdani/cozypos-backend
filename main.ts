@@ -5,6 +5,7 @@ import { Application, Router } from "https://deno.land/x/oak@v4.0.0/mod.ts";
 import { ApiKey, Item, Project, ItemProject, Transaction, ItemTransaction, StockIn, ItemStockIn } from "./model.ts";
 import { route } from "./router.ts";
 import "https://deno.land/x/dotenv@v0.4.1/load.ts";
+import { oakCors } from "https://deno.land/x/cors/mod.ts";
 
 const dbName = Deno.env.get("DB_NAME");
 const host = Deno.env.get("DB_HOST");
@@ -38,6 +39,11 @@ async function startOak() {
 
   route(r);
 
+  app.use(oakCors({
+    origin: "*",
+    allowedHeaders: "*",
+    methods: "*"
+  }));
   app.use(r.routes());
   app.use(r.allowedMethods());
 

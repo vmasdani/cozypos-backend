@@ -6,11 +6,12 @@ import { db } from "./main.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.2.1/mod.ts";
 // import { config } from "https://deno.land/x/dotenv@v0.4.1/mod.ts";
 import "https://deno.land/x/dotenv@v0.4.1/load.ts";
-import { projectTransactionViewHandler, getItemsStock } from "./handler.ts";
+import { projectTransactionViewHandler, getItemsStock, getProjects } from "./handler.ts";
 
 const findAll = (dbModel: BaseModel) => {
   return async (ctx: RouterContext) => {
-    ctx.response.body = await dbModel.findAll(Where.expr("true"));
+    const foundRows = (await dbModel.findAll(Where.expr("true"))).reverse();
+    ctx.response.body = foundRows;
   }
 }
 
@@ -83,6 +84,7 @@ export function route(r: Router) {
     .delete("/projects/:id", del(db.project))
 
     .get("/projects/:id/transactions", projectTransactionViewHandler())
+    .get("/projectsview", getProjects())
 
     // apiKey
     .get("/apikeys", findAll(db.apiKey))
