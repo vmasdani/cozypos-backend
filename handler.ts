@@ -5,6 +5,7 @@ import {
 import { db } from "./main.ts";
 import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView } from "./view.ts";
 import { Item, ItemTransaction, Transaction, Project } from "./model.ts";
+import { TransactionPostBody } from "./postbody.ts";
 
 export const projectTransactionViewHandler = () => {
   return async (ctx: RouterContext) => {
@@ -104,5 +105,44 @@ export const getProjects = () => {
       totalIncome: projectViews.reduce((acc, projectView) => acc + projectView.income, 0)
     };
     ctx.response.body = projectViewsFinal;
+  }
+}
+
+export const transactionView = () => {
+  return async (ctx: RouterContext) => {
+    if(ctx.params.id) {
+      const transaction = await db.transaction.findById(ctx.params.id);
+      const itemTransactions = await db.itemTransaction.findAll(Where.from({ transaction_id: ctx.params.id }));
+
+      const itemTransactionViews: ItemTransactionView[] = await Promise.all(itemTransactions.map(async (itemTransaction) => {
+        const item = await db.item.findById(itemTransaction.itemId ? itemTransaction.itemId : 0);
+        
+        return {
+          itemTransaction: {...itemTransaction} as ItemTransaction,
+          item: {...item} as Item
+        }
+      }));
+
+      console.log("Transaction:", transaction);
+      console.log("ItemTransactions:", itemTransactions);
+      
+      const transactionView: TransactionView = {
+        transaction: {...transaction} as Transaction,
+        itemTransactions: itemTransactionViews,
+        totalPrice: 0
+      };
+
+      ctx.response.body = transactionView;
+    }
+  }
+}
+
+export const saveTransaction = () => {
+  return async (ctx: RouterContext) => {
+    const body: TransactionPostBody = await (await ctx.request.body()).value;
+
+    console.log("Body:", body);
+
+    ctx.response.status = 201;
   }
 }
