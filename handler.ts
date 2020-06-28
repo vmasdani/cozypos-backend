@@ -1,6 +1,6 @@
 import { RouterContext } from "https://deno.land/x/oak@v4.0.0/mod.ts";
 import {
-  Where
+  Where, Order, Query
 } from "https://deno.land/x/dso@v1.0.0/mod.ts";
 import { db } from "./main.ts";
 import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView } from "./view.ts";
@@ -144,5 +144,34 @@ export const saveTransaction = () => {
     console.log("Body:", body);
 
     ctx.response.status = 201;
+  }
+}
+
+export const searchItems = () => {
+  return async (ctx: RouterContext) => {
+    const name = ctx.request.url.searchParams.get("name");
+    console.log("Searching items");
+    console.log("Searching items", name);
+    
+    if(name) {
+      const foundItems = (await db.item.findAll(Where.like("name", `%${name}%`))).reverse().slice(0, 10);
+
+      const itemWithStock: ItemStockView[] = await Promise.all (foundItems.map(async (foundItem) => {
+        const itemTransactions = await db.itemTransaction.findAll(Where.from({ item_id: foundItem.id }));
+        const stockIns = await db.stockIn.findAll(Where.from({ item_id: foundItem.id }));
+
+        const outQty = itemTransactions.reduce((acc, itemTransaction) => acc + (itemTransaction.qty ? itemTransaction.qty : 0), 0);
+        const inQty = stockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
+      
+        return {
+          item: {...foundItem} as Item,
+          inStock: inQty - outQty
+        }
+      }));
+
+      ctx.response.body = itemWithStock; 
+    } else {
+      ctx.response.body = [];
+    }
   }
 }
