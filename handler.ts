@@ -4,9 +4,8 @@ import {
 } from "https://deno.land/x/dso@v1.0.0/mod.ts";
 import { db } from "./main.ts";
 import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView } from "./view.ts";
-import { Item, ItemTransaction, Transaction, Project } from "./model.ts";
-import { TransactionPostBody } from "./postbody.ts";
-
+import { Item, ItemTransaction, Transaction, Project, StockIn } from "./model.ts";
+import { TransactionPostBody, ItemPostBody } from "./postbody.ts";
 export const projectTransactionViewHandler = () => {
   return async (ctx: RouterContext) => {
     if (ctx.params.id) {
@@ -52,7 +51,10 @@ export const getItemsStock = () => {
     
     const mappedItems: ItemStockView[] = await Promise.all(items.map(async (item) => {
       const itemTransactions = await db.itemTransaction.findAll(Where.from({ item_id: item.id }));
-      const itemStockIns = await db.itemStockIn.findAll(Where.from({ item_id: item.id }));
+      const itemStockIns = await db.stockIn.findAll(Where.from({ item_id: item.id }));
+
+      // console.log("Item:", item);
+      // console.log("Item stockins:", itemStockIns);      
 
       const soldAmount = itemTransactions.reduce((acc, itemTransaction) => acc - (itemTransaction.qty ? itemTransaction.qty : 0), 0);
       const stockInAmount = itemStockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
@@ -172,6 +174,30 @@ export const searchItems = () => {
       ctx.response.body = itemWithStock; 
     } else {
       ctx.response.body = [];
+    }
+  }
+}
+
+export const saveItem = () => {
+  return async (ctx: RouterContext) => {
+    const itemPostBody: ItemPostBody = await (await ctx.request.body()).value;
+
+    if(itemPostBody.item.id === 0) {
+      const newItemId = await db.item.insert(itemPostBody.item);
+      
+      if(newItemId) {
+        if(itemPostBody.withInitialStock) {
+          const newStockIn = {
+            id: 0,
+            qty: itemPostBody.initialStockQty,
+            itemId: newItemId
+          };
+
+          ctx.response.body = await db.stockIn.insert(newStockIn);
+        }
+      }
+    } else {
+      ctx.response.body = await db.item.update(itemPostBody.item);
     }
   }
 }
