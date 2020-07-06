@@ -1,8 +1,9 @@
 import { Transaction, ItemTransaction, Item } from "./model.ts";
+import { ItemTransactionView } from "./view.ts";
 
 export interface TransactionPostBody {
   transaction: Transaction,
-  itemTransactions: ItemTransaction[],
+  itemTransactions: ItemTransactionView[],
   itemTransactionDeleteIds: number[]
 }
 

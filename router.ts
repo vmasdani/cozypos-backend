@@ -104,7 +104,7 @@ export function route(r: Router) {
     .delete("/transactions/:id", del(db.transaction))
 
     .get("/transactions/view/:id", transactionView())
-    .post("/transactions/save", saveTransaction())
+    .post("/transactionsave", saveTransaction())
 
     // itemTransaction
     .get("/itemtransactions", findAll(db.itemTransaction))
