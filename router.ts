@@ -6,7 +6,7 @@ import { db } from "./main.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.2.1/mod.ts";
 // import { config } from "https://deno.land/x/dotenv@v0.4.1/mod.ts";
 import "https://deno.land/x/dotenv@v0.4.1/load.ts";
-import { projectTransactionViewHandler, getItemsStock, getProjects, saveTransaction, transactionView, searchItems, saveItem } from "./handler.ts";
+import { projectTransactionViewHandler, getItemsStock, getProjects, saveTransaction, transactionView, searchItems, saveItem, getItemStockIns, postItemStockIns } from "./handler.ts";
 
 const findAll = (dbModel: BaseModel) => {
   return async (ctx: RouterContext) => {
@@ -75,6 +75,8 @@ export function route(r: Router) {
     .post("/items", save(db.item))
     .delete("/items/:id", del(db.item))
     
+    .get("/items/:id/stockins", getItemStockIns())
+    .post("/items/:id/stockins", postItemStockIns())
     .get("/itemstocks", getItemsStock())
     .get("/itemsearch", searchItems())
     .post("/itemsave", saveItem())

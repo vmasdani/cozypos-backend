@@ -3,9 +3,10 @@ import {
   Where, Order, Query
 } from "https://deno.land/x/dso@v1.0.0/mod.ts";
 import { db } from "./main.ts";
-import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView } from "./view.ts";
+import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView, ItemStockInsView } from "./view.ts";
 import { Item, ItemTransaction, Transaction, Project, StockIn } from "./model.ts";
-import { TransactionPostBody, ItemPostBody } from "./postbody.ts";
+import { TransactionPostBody, ItemPostBody, StockInPostBody } from "./postbody.ts";
+
 export const projectTransactionViewHandler = () => {
   return async (ctx: RouterContext) => {
     if (ctx.params.id) {
@@ -145,6 +146,32 @@ export const saveTransaction = () => {
 
     console.log("Body:", body);
 
+    const transactionId =  await (async () => {
+      if(body.transaction.id === 0) {
+        return await db.transaction.insert(body.transaction);
+      } else {
+        return await db.transaction.update(body.transaction);
+      }
+    })();
+
+    if(transactionId) {
+      await Promise.all(
+        body.itemTransactions.map(async itemTransactionView => {
+          if(itemTransactionView.itemTransaction.id === 0) {
+            await db.itemTransaction.insert(itemTransactionView.itemTransaction);
+          } else {
+            await db.itemTransaction.update(itemTransactionView.itemTransaction);
+          }
+        })
+      );
+    }
+
+    await Promise.all(
+      body.itemTransactionDeleteIds.map(async id => {
+        await db.itemTransaction.delete(Where.from({ id: id }));
+      })
+    );
+
     ctx.response.status = 201;
   }
 }
@@ -199,5 +226,36 @@ export const saveItem = () => {
     } else {
       ctx.response.body = await db.item.update(itemPostBody.item);
     }
+  }
+}
+
+export const getItemStockIns = () => {
+  return async (ctx: RouterContext) => {
+    if(ctx.params.id) {
+      const foundItem = await db.item.findById(ctx.params.id);
+      const stockIns = await db.stockIn.findAll(Where.from({ item_id: ctx.params.id }));
+
+      const itemStockInsView: ItemStockInsView = {
+        item: foundItem as Item,
+        stockIns: stockIns as StockIn[]
+      }
+
+      ctx.response.body = itemStockInsView;
+    }
+  }
+}
+ 
+export const postItemStockIns = () => {
+  return async (ctx: RouterContext) => {
+    const body = await ((await ctx.request.body()).value) as StockInPostBody;
+
+    await Promise.all(
+      body.stockIns.map(async stockIn => {
+        if(stockIn.id === 0) 
+          await db.stockIn.insert({...stockIn, itemId: body.item.id})
+        else
+          await db.stockIn.update({...stockIn, itemId: body.item.id})
+      })
+    );
   }
 }

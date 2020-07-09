@@ -1,4 +1,5 @@
-import { Item, Transaction, ItemTransaction, Project } from "./model.ts";
+import { Item, Transaction, ItemTransaction, Project, StockIn } from "./model.ts";
+import { StockInPostBody } from "./postbody.ts";
 
 export interface ProjectsView {
   projects: ProjectView[],
@@ -30,4 +31,9 @@ export interface ItemTransactionView {
 export interface ItemStockView {
   item: Item,
   inStock: number,
+}
+
+export interface ItemStockInsView {
+  item: Item,
+  stockIns: StockIn[]
 }
