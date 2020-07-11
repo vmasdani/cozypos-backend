@@ -150,17 +150,28 @@ export const saveTransaction = () => {
       if(body.transaction.id === 0) {
         return await db.transaction.insert(body.transaction);
       } else {
-        return await db.transaction.update(body.transaction);
+        return body.transaction.id;
       }
     })();
+    
+    console.log("Saved transaction ID:", transactionId);
 
     if(transactionId) {
       await Promise.all(
         body.itemTransactions.map(async itemTransactionView => {
+          console.log("item transaction view: ", itemTransactionView);
+          
+          const itemTransactionWithTransactionId = {
+            ...itemTransactionView.itemTransaction,
+            transactionId: transactionId
+          };
+
+          console.log("With transaction id:", itemTransactionWithTransactionId);
+
           if(itemTransactionView.itemTransaction.id === 0) {
-            await db.itemTransaction.insert(itemTransactionView.itemTransaction);
+            await db.itemTransaction.insert(itemTransactionWithTransactionId);
           } else {
-            await db.itemTransaction.update(itemTransactionView.itemTransaction);
+            await db.itemTransaction.update(itemTransactionWithTransactionId);
           }
         })
       );
@@ -220,11 +231,14 @@ export const saveItem = () => {
             itemId: newItemId
           };
 
-          ctx.response.body = await db.stockIn.insert(newStockIn);
+          await db.stockIn.insert(newStockIn);
         }
+
+        ctx.response.body = newItemId;
       }
     } else {
-      ctx.response.body = await db.item.update(itemPostBody.item);
+      await db.item.update(itemPostBody.item);
+      ctx.response.body = itemPostBody.item.id;
     }
   }
 }
