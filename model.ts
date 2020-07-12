@@ -104,6 +104,9 @@ export class StockIn extends BaseModel {
   @Field({ type: FieldType.STRING, default: "''" })
   uid?: string;
 
+  @Field({ type: FieldType.STRING, default: "''" })
+  pic?: string;
+
   @Field({ type: FieldType.INT, notNull: true })
   itemId!: number;
 

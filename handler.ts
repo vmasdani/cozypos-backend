@@ -6,6 +6,8 @@ import { db } from "./main.ts";
 import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView, ItemStockInsView } from "./view.ts";
 import { Item, ItemTransaction, Transaction, Project, StockIn } from "./model.ts";
 import { TransactionPostBody, ItemPostBody, StockInPostBody } from "./postbody.ts";
+import { readCSV, readCSVObjects } from "https://deno.land/x/csv@v0.3.1/mod.ts";
+import { v4 } from "https://deno.land/std@v0.60.0/uuid/mod.ts";
 
 export const projectTransactionViewHandler = () => {
   return async (ctx: RouterContext) => {
@@ -57,7 +59,7 @@ export const getItemsStock = () => {
       // console.log("Item:", item);
       // console.log("Item stockins:", itemStockIns);      
 
-      const soldAmount = itemTransactions.reduce((acc, itemTransaction) => acc - (itemTransaction.qty ? itemTransaction.qty : 0), 0);
+      const soldAmount = itemTransactions.reduce((acc, itemTransaction) => acc + (itemTransaction.qty ? itemTransaction.qty : 0), 0);
       const stockInAmount = itemStockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
 
       return {
@@ -66,7 +68,7 @@ export const getItemsStock = () => {
       }
     }));
 
-    ctx.response.body = mappedItems;
+    ctx.response.body = mappedItems.reverse();
   }
 }
 
@@ -271,5 +273,97 @@ export const postItemStockIns = () => {
           await db.stockIn.update({...stockIn, itemId: body.item.id})
       })
     );
+  }
+}
+
+export const getTransactionsCsv = () => {
+  return async (ctx: RouterContext) => {
+    
+  }
+}
+
+export const populate = () => {
+  return async (ctx: RouterContext) => {
+    // Create project
+    const projectId = await db.project.insert({
+      id: 0,
+      uid: "",
+      name: "CF14",
+      startDate: "2020-02-23"
+    });
+
+    // Items
+    const itemsCsv = await Deno.open("./csv/items.csv");
+
+    for await (const obj of readCSVObjects(itemsCsv)) {
+      const item = {
+        id: 0,
+        uid: `item-${obj.id}`,
+        name: obj.name,
+        description: obj.desc,
+        price: Number(obj.price),
+        manufacturing_price: Number(obj.manufacturing_price)
+      };
+      
+      await db.item.insert(item);
+    }
+
+    // Stock ins
+    const stockInsCsv = await Deno.open("./csv/itemstockins.csv");
+
+    for await (const obj of readCSVObjects(stockInsCsv)) {
+      const foundItem = await db.item.findOne(Where.from({ uid: `item-${obj.item_id}` }));
+
+      const stockIn = {
+        id: 0,
+        uid: `stockin-${obj.id}`,
+        itemId: foundItem ? foundItem.id : 0,
+        pic: obj.pic,
+        qty: Number(obj.qty)
+      };
+
+      await db.stockIn.insert(stockIn);
+    }
+
+    // Transactions
+    const transactionsCsv = await Deno.open("./csv/transactions.csv");
+
+    for await (const obj of readCSVObjects(transactionsCsv)) {
+      const transaction = {
+        id: 0,
+        uid: `transaction-${obj.id}`,
+        cashier: obj.cashier,
+        priceIsCustom: obj.custom_price === "1",
+        customPrice: Number(obj.custom_price === "1" ? "0" : obj.custom_price),
+        projectId: projectId
+      };
+      
+      // console.log(obj);
+      await db.transaction.insert(transaction);
+    }
+
+    // Item transactions
+    const itemTransactionsCsv = await Deno.open("./csv/itemtransactions.csv");
+
+    for await (const obj of readCSVObjects(itemTransactionsCsv)) {
+      const foundTransaction = await db.transaction.findOne(Where.from({ uid: `transaction-${obj.transaction_id}` }));
+      const foundItem = await db.item.findOne(Where.from({ uid: `item-${obj.item_id}` }));
+
+      const itemTransaction = {
+        id: 0,
+        uid: `itemtransaction-${obj.id}`,
+        itemId: foundItem ? foundItem.id : 0,
+        transactionId: foundTransaction ? foundTransaction.id : 0,
+        qty: Number(obj.qty)
+      };
+      // console.log(itemTransaction);
+      // console.log("Found transaction:", foundTransaction);
+      // console.log("Found item: ", foundItem);
+
+      await db.itemTransaction.insert(itemTransaction);
+    }
+
+    console.log("Population successful!");
+    ctx.response.body = "Population successful!";
   }
 }

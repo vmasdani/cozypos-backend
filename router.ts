@@ -6,7 +6,8 @@ import { db } from "./main.ts";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.2.1/mod.ts";
 // import { config } from "https://deno.land/x/dotenv@v0.4.1/mod.ts";
 import "https://deno.land/x/dotenv@v0.4.1/load.ts";
-import { projectTransactionViewHandler, getItemsStock, getProjects, saveTransaction, transactionView, searchItems, saveItem, getItemStockIns, postItemStockIns } from "./handler.ts";
+import { projectTransactionViewHandler, getItemsStock, getProjects, saveTransaction, transactionView, searchItems, saveItem, getItemStockIns, postItemStockIns, getTransactionsCsv, populate } from "./handler.ts";
+import * as base64 from "https://deno.land/x/base64@v0.2.0/mod.ts";
 
 const findAll = (dbModel: BaseModel) => {
   return async (ctx: RouterContext) => {
@@ -39,8 +40,12 @@ const save = (dbModel: BaseModel) => {
 
 const del = (dbModel: BaseModel) => {
   return async (ctx: RouterContext) => {
+    console.log("DELETE with id:", ctx.params.id);
+
     if(ctx.params.id) {
-      await dbModel.delete(Where.from({ id: ctx.params.id }))
+      await dbModel.delete(Where.from({ id: ctx.params.id }));
+      
+      ctx.response.body = ctx.params.id;
     }
   }
 }
@@ -56,7 +61,30 @@ export function route(r: Router) {
       const hash = Deno.env.get("PASSWORD");
 
       if(loginInfo.password && hash) {
-        ctx.response.body = await bcrypt.compare(loginInfo.password, hash);
+        const match = await bcrypt.compare(loginInfo.password, hash);
+        
+        const username =  loginInfo.username ? loginInfo.username : "";
+        const usernameBase64 = base64.fromUint8Array(new TextEncoder().encode(username));
+        const ts = await bcrypt.hash(`${new Date().getTime()}`);
+
+        const apiKey = `${usernameBase64}:${ts}`;
+
+        // Replace API key
+        const foundApiKey = await db.apiKey.findOne(Where.like("api_key", `${usernameBase64}%`));
+
+        console.log("Found api key:", foundApiKey);
+
+        if(foundApiKey) {
+          await db.apiKey.update({ id: foundApiKey.id, apiKey: apiKey });
+        } else {
+          await db.apiKey.insert({ id: 0, apiKey: apiKey });
+        }
+    
+        if(match) {
+          ctx.response.body = apiKey;
+        } else {
+          ctx.response.status = 500;
+        }
       }
     })
     .get("/generate", async (ctx) => {
@@ -107,6 +135,7 @@ export function route(r: Router) {
 
     .get("/transactions/view/:id", transactionView())
     .post("/transactionsave", saveTransaction())
+    .get("/transactioncsv", getTransactionsCsv())
 
     // itemTransaction
     .get("/itemtransactions", findAll(db.itemTransaction))
@@ -119,4 +148,7 @@ export function route(r: Router) {
     .get("/stockins/:id", findOne(db.stockIn))
     .post("/stockins", save(db.stockIn))
     .delete("/stockins/:id", del(db.stockIn))
+
+    // populate
+    .get("/populate", populate())
 }
