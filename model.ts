@@ -110,8 +110,8 @@ export class StockIn extends BaseModel {
   @Field({ type: FieldType.INT, notNull: true })
   itemId!: number;
 
-  // @Field({ type: FieldType.INT, notNull: true })
-  // projectId!: number;
+  @Field({ type: FieldType.INT, notNull: true })
+  projectId!: number;
 
   @Field({ type: FieldType.INT, default: 0 })
   qty?: number;
