@@ -1,4 +1,4 @@
-import { RouterContext } from "https://deno.land/x/oak@v4.0.0/mod.ts";
+import { RouterContext } from "https://deno.land/x/oak@v6.0.1/mod.ts";
 import {
   Where, Order, Query
 } from "https://deno.land/x/dso@v1.0.0/mod.ts";
@@ -6,8 +6,8 @@ import { db } from "./main.ts";
 import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView, ItemStockInsView } from "./view.ts";
 import { Item, ItemTransaction, Transaction, Project, StockIn } from "./model.ts";
 import { TransactionPostBody, ItemPostBody, StockInPostBody } from "./postbody.ts";
-import { readCSV, readCSVObjects } from "https://deno.land/x/csv@v0.3.1/mod.ts";
-import { v4 } from "https://deno.land/std@v0.60.0/uuid/mod.ts";
+import { readCSV, readCSVObjects } from "https://deno.land/x/csv@v0.4.0/mod.ts";
+import { v4 } from "https://deno.land/std@v0.63.0/uuid/mod.ts";
 
 export const projectTransactionViewHandler = () => {
   return async (ctx: RouterContext) => {

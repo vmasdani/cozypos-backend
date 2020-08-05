@@ -1,11 +1,11 @@
 import {
   dso
 } from "https://deno.land/x/dso@v1.0.0/mod.ts";
-import { Application, Router } from "https://deno.land/x/oak@v4.0.0/mod.ts";
+import { Application, Router } from "https://deno.land/x/oak@v6.0.1/mod.ts";
 import { ApiKey, Item, Project, ItemProject, Transaction, ItemTransaction, StockIn, ItemStockIn } from "./model.ts";
 import { route } from "./router.ts";
-import "https://deno.land/x/dotenv@v0.4.1/load.ts";
-import { oakCors } from "https://deno.land/x/cors/mod.ts";
+import "https://deno.land/x/dotenv@v0.5.0/load.ts";
+import { oakCors } from "https://deno.land/x/cors@v1.1.0/mod.ts";
 
 const dbName = Deno.env.get("DB_NAME");
 const host = Deno.env.get("DB_HOST");
