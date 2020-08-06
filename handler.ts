@@ -83,15 +83,22 @@ export const getProjects = () => {
         const itemTransactions = await db.itemTransaction.findAll(Where.from({ transaction_id: transaction.id }));
         
         const itemTransactionIncomes = await Promise.all(itemTransactions.map(async (itemTransaction) => {
-          const item = await db.item.findById(itemTransaction.id ? itemTransaction.id : 0);
+          const item = await db.item.findById(itemTransaction.itemId ? itemTransaction.itemId : 0);
           
           const itemPrice = item?.price ? item.price : 0;
           const itemTransactionQty = itemTransaction.qty ? itemTransaction.qty : 0;
 
+          // console.log("ItemTransaction id:", itemTransaction.id,  "Item ID:", item?.id, item?.name, itemTransactionQty)
+
           return itemPrice * itemTransactionQty;
         }));
 
-        return itemTransactionIncomes.reduce((acc, income) => acc + income, 0);
+        const finalPrice = transaction.priceIsCustom 
+          ? transaction.customPrice ? transaction.customPrice : 0
+          : itemTransactionIncomes.reduce((acc, income) => acc + income, 0);
+
+        // console.log(finalPrice);
+        return finalPrice;
       }));
 
       const projectIncome = transactionIncomes.reduce((acc, income) => acc + income, 0);
@@ -285,6 +292,7 @@ export const getTransactionsCsv = () => {
 export const populate = () => {
   return async (ctx: RouterContext) => {
     // Create project
+    console.log("Populating project");
     const projectId = await db.project.insert({
       id: 0,
       uid: "",
@@ -293,6 +301,7 @@ export const populate = () => {
     });
 
     // Items
+    console.log("Populating item");
     const itemsCsv = await Deno.open("./csv/items.csv");
 
     for await (const obj of readCSVObjects(itemsCsv)) {
@@ -309,23 +318,31 @@ export const populate = () => {
     }
 
     // Stock ins
-    const stockInsCsv = await Deno.open("./csv/itemstockins.csv");
+    console.log("Populating stock in");
+    try {
+      const stockInsCsv = await Deno.open("./csv/itemstockins.csv");
 
-    for await (const obj of readCSVObjects(stockInsCsv)) {
-      const foundItem = await db.item.findOne(Where.from({ uid: `item-${obj.item_id}` }));
-
-      const stockIn = {
-        id: 0,
-        uid: `stockin-${obj.id}`,
-        itemId: foundItem ? foundItem.id : 0,
-        pic: obj.pic,
-        qty: Number(obj.qty)
-      };
-
-      await db.stockIn.insert(stockIn);
+      for await (const obj of readCSVObjects(stockInsCsv)) {
+        const foundItem = await db.item.findOne(Where.from({ uid: `item-${obj.item_id}` }));
+  
+        const stockIn = {
+          id: 0,
+          uid: `stockin-${obj.id}`,
+          itemId: foundItem ? foundItem.id : 0,
+          pic: obj.pic,
+          qty: Number(obj.qty),
+          project_id: projectId
+        };
+  
+        await db.stockIn.insert(stockIn);
+      }  
+    } catch(e) {
+      console.error(e);
     }
+    
 
     // Transactions
+    console.log("Populating transaction");
     const transactionsCsv = await Deno.open("./csv/transactions.csv");
 
     for await (const obj of readCSVObjects(transactionsCsv)) {
@@ -333,8 +350,8 @@ export const populate = () => {
         id: 0,
         uid: `transaction-${obj.id}`,
         cashier: obj.cashier,
-        priceIsCustom: obj.custom_price === "1",
-        customPrice: Number(obj.custom_price === "1" ? "0" : obj.custom_price),
+        priceIsCustom: obj.custom_price === "1" || obj.custom_price !== "0",
+        customPrice: obj.custom_price === "1" || obj.custom_price !== "0" ? Number(obj.custom_price) : 0,
         projectId: projectId
       };
       
@@ -343,6 +360,7 @@ export const populate = () => {
     }
 
     // Item transactions
+    console.log("Populating Item transaction");
     const itemTransactionsCsv = await Deno.open("./csv/itemtransactions.csv");
 
     for await (const obj of readCSVObjects(itemTransactionsCsv)) {
