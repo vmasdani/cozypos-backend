@@ -1,5 +1,5 @@
 # Cozy PoS Backend Deno
-Cozy Point of Sales backend made in Deno, a new Javascript backend runtime based on Rust, V8, and Typescript.
+Cozy Point of Sales backend made in Deno, a new Javascript backend runtime based on Rust, V8, and Typescript. Last known running on `Deno 1.2.3`
 
 ### Steps to run
 1. Get MySQL database running and create database, for example `cozypos`
