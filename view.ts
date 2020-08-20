@@ -35,5 +35,10 @@ export interface ItemStockView {
 
 export interface ItemStockInsView {
   item: Item,
-  stockIns: StockIn[]
+  stockIns: StockInView[]
+}
+
+export interface StockInView {
+  stockIn: StockIn,
+  project: Project | null
 }

@@ -3,8 +3,8 @@ import {
   Where, Order, Query
 } from "https://deno.land/x/dso@v1.0.0/mod.ts";
 import { db } from "./main.ts";
-import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView, ItemStockInsView } from "./view.ts";
-import { Item, ItemTransaction, Transaction, Project, StockIn } from "./model.ts";
+import { ItemTransactionView, TransactionView, ItemStockView, ProjectTransactionsView, ProjectsView, ProjectView, ItemStockInsView, StockInView } from "./view.ts";
+import { Item, ItemTransaction, Transaction, Project, StockIn, ItemStockIn } from "./model.ts";
 import { TransactionPostBody, ItemPostBody, StockInPostBody } from "./postbody.ts";
 import { readCSV, readCSVObjects } from "https://deno.land/x/csv@v0.4.0/mod.ts";
 import { v4 } from "https://deno.land/std@v0.63.0/uuid/mod.ts";
@@ -116,6 +116,9 @@ export const getProjects = () => {
       projects: [...projectViews].reverse(),
       totalIncome: projectViews.reduce((acc, projectView) => acc + projectView.income, 0)
     };
+
+    // console.log("project view final:", projectViewsFinal);
+
     ctx.response.body = projectViewsFinal;
   }
 }
@@ -135,8 +138,8 @@ export const transactionView = () => {
         }
       }));
 
-      console.log("Transaction:", transaction);
-      console.log("ItemTransactions:", itemTransactions);
+      // console.log("Transaction:", transaction);
+      // console.log("ItemTransactions:", itemTransactions);
       
       const transactionView: TransactionView = {
         transaction: {...transaction} as Transaction,
@@ -153,7 +156,7 @@ export const saveTransaction = () => {
   return async (ctx: RouterContext) => {
     const body: TransactionPostBody = await (await ctx.request.body()).value;
 
-    console.log("Body:", body);
+    // console.log("Body:", body);
 
     const transactionId =  await (async () => {
       if(body.transaction.id === 0) {
@@ -163,19 +166,19 @@ export const saveTransaction = () => {
       }
     })();
     
-    console.log("Saved transaction ID:", transactionId);
+    // console.log("Saved transaction ID:", transactionId);
 
     if(transactionId) {
       await Promise.all(
         body.itemTransactions.map(async itemTransactionView => {
-          console.log("item transaction view: ", itemTransactionView);
+          // console.log("item transaction view: ", itemTransactionView);
           
           const itemTransactionWithTransactionId = {
             ...itemTransactionView.itemTransaction,
             transactionId: transactionId
           };
 
-          console.log("With transaction id:", itemTransactionWithTransactionId);
+          // console.log("With transaction id:", itemTransactionWithTransactionId);
 
           if(itemTransactionView.itemTransaction.id === 0) {
             await db.itemTransaction.insert(itemTransactionWithTransactionId);
@@ -199,9 +202,9 @@ export const saveTransaction = () => {
 export const searchItems = () => {
   return async (ctx: RouterContext) => {
     const name = ctx.request.url.searchParams.get("name");
-    console.log("Searching items");
-    console.log("Searching items", name);
-    
+    // console.log("Searching items");
+    // console.log("Searching items", name);
+
     if(name) {
       const foundItems = (await db.item.findAll(Where.like("name", `%${name}%`))).reverse().slice(0, 10);
 
@@ -227,24 +230,33 @@ export const searchItems = () => {
 
 export const saveItem = () => {
   return async (ctx: RouterContext) => {
-    const itemPostBody: ItemPostBody = await (await ctx.request.body()).value;
+    // console.log("Saving item");
+    const itemPostBody = await ctx.request.body({ type: "json" }).value as ItemPostBody;
 
-    if(itemPostBody.item.id === 0) {
-      const newItemId = await db.item.insert(itemPostBody.item);
+    console.log("itempost body", itemPostBody);
+
+    if(itemPostBody?.item.id === 0) {
+      try {
+        const newItemId = await db.item.insert(itemPostBody.item);
       
-      if(newItemId) {
-        if(itemPostBody.withInitialStock) {
-          const newStockIn = {
-            id: 0,
-            qty: itemPostBody.initialStockQty,
-            itemId: newItemId
-          };
-
-          await db.stockIn.insert(newStockIn);
-        }
-
-        ctx.response.body = newItemId;
+        if(newItemId) {
+          if(itemPostBody.withInitialStock) {
+            const newStockIn = {
+              id: 0,
+              qty: itemPostBody.initialStockQty,
+              itemId: newItemId,
+              projectId: itemPostBody.project.id
+            };
+  
+            await db.stockIn.insert(newStockIn);
+          }
+  
+          ctx.response.body = newItemId;
+        }  
+      } catch(e) {
+        console.error(e)
       }
+      
     } else {
       await db.item.update(itemPostBody.item);
       ctx.response.body = itemPostBody.item.id;
@@ -258,10 +270,17 @@ export const getItemStockIns = () => {
       const foundItem = await db.item.findById(ctx.params.id);
       const stockIns = await db.stockIn.findAll(Where.from({ item_id: ctx.params.id }));
 
-      const itemStockInsView: ItemStockInsView = {
+      const itemStockInsView = {
         item: foundItem as Item,
-        stockIns: stockIns as StockIn[]
-      }
+        stockIns: await Promise.all(stockIns.map(async stockIn => {
+          const foundProject = await db.project.findById(stockIn.projectId ? stockIn.projectId : 0);
+
+          return {
+            project: (foundProject ? foundProject : null) as null | Project,
+            stockIn: stockIn as StockIn
+          }
+        })) as StockInView[]
+      };
 
       ctx.response.body = itemStockInsView;
     }

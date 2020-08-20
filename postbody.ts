@@ -1,4 +1,4 @@
-import { Transaction, ItemTransaction, Item, StockIn } from "./model.ts";
+import { Transaction, ItemTransaction, Item, StockIn, Project } from "./model.ts";
 import { ItemTransactionView } from "./view.ts";
 
 export interface TransactionPostBody {
@@ -10,7 +10,8 @@ export interface TransactionPostBody {
 export interface ItemPostBody {
   item: Item,
   withInitialStock: boolean,
-  initialStockQty: number
+  initialStockQty: number,
+  project: Project
 }
 
 export interface StockInPostBody {
