@@ -13,7 +13,7 @@ DB_USERNAME=
 DB_PASSWORD=
 ```
 
-3. Download [Deno](https://deno.land/) (Tested working on Deno 1.2.2)
+3. Download [Deno](https://deno.land/) (Tested working on Deno 1.3.0)
 ```sh
 curl -fsSL https://deno.land/x/install/install.sh | sh
 ```
