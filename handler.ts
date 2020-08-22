@@ -16,7 +16,7 @@ export const projectTransactionViewHandler = () => {
       const transactions = await db.transaction.findAll(Where.from({ project_id: project?.id }));
 
       const transactionViews: TransactionView[] = await Promise.all(transactions.map(async (transaction) => {
-        const itemTransactions = await db.itemTransaction.findAll(Where.from({ transaction_id: transaction.id  }));
+        const itemTransactions = await db.itemTransaction.findAll(Where.from({ transaction_id: transaction.id }));
 
         const itemTransactionViews: ItemTransactionView[] = await Promise.all(itemTransactions.map(async (itemTransaction) => {
           const item = await db.item.findOne(Where.from({ id: itemTransaction.itemId }));
@@ -38,7 +38,7 @@ export const projectTransactionViewHandler = () => {
         }
       }));
 
-      const projectView: ProjectTransactionsView = { 
+      const projectView: ProjectTransactionsView = {
         project: project as Project,
         transactions: transactionViews.reverse()
       }
@@ -51,7 +51,7 @@ export const projectTransactionViewHandler = () => {
 export const getItemsStock = () => {
   return async (ctx: RouterContext) => {
     const items = await db.item.findAll(Where.expr("true"));
-    
+
     const mappedItems: ItemStockView[] = await Promise.all(items.map(async (item) => {
       const itemTransactions = await db.itemTransaction.findAll(Where.from({ item_id: item.id }));
       const itemStockIns = await db.stockIn.findAll(Where.from({ item_id: item.id }));
@@ -63,8 +63,8 @@ export const getItemsStock = () => {
       const stockInAmount = itemStockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
 
       return {
-        item: {...item} as Item,
-        inStock: stockInAmount - soldAmount 
+        item: { ...item } as Item,
+        inStock: stockInAmount - soldAmount
       }
     }));
 
@@ -81,10 +81,10 @@ export const getProjects = () => {
 
       const transactionIncomes = await Promise.all(transactions.map(async (transaction) => {
         const itemTransactions = await db.itemTransaction.findAll(Where.from({ transaction_id: transaction.id }));
-        
+
         const itemTransactionIncomes = await Promise.all(itemTransactions.map(async (itemTransaction) => {
           const item = await db.item.findById(itemTransaction.itemId ? itemTransaction.itemId : 0);
-          
+
           const itemPrice = item?.price ? item.price : 0;
           const itemTransactionQty = itemTransaction.qty ? itemTransaction.qty : 0;
 
@@ -93,7 +93,7 @@ export const getProjects = () => {
           return itemPrice * itemTransactionQty;
         }));
 
-        const finalPrice = transaction.priceIsCustom 
+        const finalPrice = transaction.priceIsCustom
           ? transaction.customPrice ? transaction.customPrice : 0
           : itemTransactionIncomes.reduce((acc, income) => acc + income, 0);
 
@@ -102,9 +102,9 @@ export const getProjects = () => {
       }));
 
       const projectIncome = transactionIncomes.reduce((acc, income) => acc + income, 0);
-    
+
       const projectView: ProjectView = {
-        project: {...project} as Project,
+        project: { ...project } as Project,
         income: projectIncome,
         totalManufacturingPrice: 0
       }
@@ -125,24 +125,24 @@ export const getProjects = () => {
 
 export const transactionView = () => {
   return async (ctx: RouterContext) => {
-    if(ctx.params.id) {
+    if (ctx.params.id) {
       const transaction = await db.transaction.findById(ctx.params.id);
       const itemTransactions = await db.itemTransaction.findAll(Where.from({ transaction_id: ctx.params.id }));
 
       const itemTransactionViews: ItemTransactionView[] = await Promise.all(itemTransactions.map(async (itemTransaction) => {
         const item = await db.item.findById(itemTransaction.itemId ? itemTransaction.itemId : 0);
-        
+
         return {
-          itemTransaction: {...itemTransaction} as ItemTransaction,
-          item: {...item} as Item
+          itemTransaction: { ...itemTransaction } as ItemTransaction,
+          item: { ...item } as Item
         }
       }));
 
       // console.log("Transaction:", transaction);
       // console.log("ItemTransactions:", itemTransactions);
-      
+
       const transactionView: TransactionView = {
-        transaction: {...transaction} as Transaction,
+        transaction: { ...transaction } as Transaction,
         itemTransactions: itemTransactionViews,
         totalPrice: 0
       };
@@ -154,25 +154,30 @@ export const transactionView = () => {
 
 export const saveTransaction = () => {
   return async (ctx: RouterContext) => {
-    const body: TransactionPostBody = await (await ctx.request.body()).value;
+    const body: TransactionPostBody = await ctx.request.body({ type: "json" }).value;
 
     // console.log("Body:", body);
 
-    const transactionId =  await (async () => {
-      if(body.transaction.id === 0) {
+    const transactionId = await (async () => {
+      if (body.transaction.id === 0) {
         return await db.transaction.insert(body.transaction);
       } else {
+        try {
+          await db.transaction.update(body.transaction);
+        } catch(e) {
+          console.error(e);
+        }
         return body.transaction.id;
       }
     })();
-    
-    // console.log("Saved transaction ID:", transactionId);
 
-    if(transactionId) {
+    console.log("Saved transaction ID:", transactionId);
+
+    if (transactionId) {
       await Promise.all(
         body.itemTransactions.map(async itemTransactionView => {
           // console.log("item transaction view: ", itemTransactionView);
-          
+
           const itemTransactionWithTransactionId = {
             ...itemTransactionView.itemTransaction,
             transactionId: transactionId
@@ -180,7 +185,7 @@ export const saveTransaction = () => {
 
           // console.log("With transaction id:", itemTransactionWithTransactionId);
 
-          if(itemTransactionView.itemTransaction.id === 0) {
+          if (itemTransactionView.itemTransaction.id === 0) {
             await db.itemTransaction.insert(itemTransactionWithTransactionId);
           } else {
             await db.itemTransaction.update(itemTransactionWithTransactionId);
@@ -196,8 +201,13 @@ export const saveTransaction = () => {
     );
 
     ctx.response.status = 201;
+    ctx.response.body = { id: transactionId };
   }
 }
+
+// export const searchItemD = () => {
+
+// }
 
 export const searchItems = () => {
   return async (ctx: RouterContext) => {
@@ -205,23 +215,23 @@ export const searchItems = () => {
     // console.log("Searching items");
     // console.log("Searching items", name);
 
-    if(name) {
+    if (name) {
       const foundItems = (await db.item.findAll(Where.like("name", `%${name}%`))).reverse().slice(0, 10);
 
-      const itemWithStock: ItemStockView[] = await Promise.all (foundItems.map(async (foundItem) => {
+      const itemWithStock: ItemStockView[] = await Promise.all(foundItems.map(async (foundItem) => {
         const itemTransactions = await db.itemTransaction.findAll(Where.from({ item_id: foundItem.id }));
         const stockIns = await db.stockIn.findAll(Where.from({ item_id: foundItem.id }));
 
         const outQty = itemTransactions.reduce((acc, itemTransaction) => acc + (itemTransaction.qty ? itemTransaction.qty : 0), 0);
         const inQty = stockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
-      
+
         return {
-          item: {...foundItem} as Item,
+          item: { ...foundItem } as Item,
           inStock: inQty - outQty
         }
       }));
 
-      ctx.response.body = itemWithStock; 
+      ctx.response.body = itemWithStock;
     } else {
       ctx.response.body = [];
     }
@@ -235,28 +245,28 @@ export const saveItem = () => {
 
     console.log("itempost body", itemPostBody);
 
-    if(itemPostBody?.item.id === 0) {
+    if (itemPostBody?.item.id === 0) {
       try {
         const newItemId = await db.item.insert(itemPostBody.item);
-      
-        if(newItemId) {
-          if(itemPostBody.withInitialStock) {
+
+        if (newItemId) {
+          if (itemPostBody.withInitialStock) {
             const newStockIn = {
               id: 0,
               qty: itemPostBody.initialStockQty,
               itemId: newItemId,
-              projectId: itemPostBody.project.id
+              projectId: itemPostBody.project?.id
             };
-  
+
             await db.stockIn.insert(newStockIn);
           }
-  
+
           ctx.response.body = newItemId;
-        }  
-      } catch(e) {
+        }
+      } catch (e) {
         console.error(e)
       }
-      
+
     } else {
       await db.item.update(itemPostBody.item);
       ctx.response.body = itemPostBody.item.id;
@@ -266,45 +276,63 @@ export const saveItem = () => {
 
 export const getItemStockIns = () => {
   return async (ctx: RouterContext) => {
-    if(ctx.params.id) {
+    if (ctx.params.id) {
       const foundItem = await db.item.findById(ctx.params.id);
       const stockIns = await db.stockIn.findAll(Where.from({ item_id: ctx.params.id }));
 
       const itemStockInsView = {
         item: foundItem as Item,
-        stockIns: await Promise.all(stockIns.map(async stockIn => {
+        stockIns: (await Promise.all(stockIns.map(async stockIn => {
           const foundProject = await db.project.findById(stockIn.projectId ? stockIn.projectId : 0);
 
           return {
             project: (foundProject ? foundProject : null) as null | Project,
             stockIn: stockIn as StockIn
           }
-        })) as StockInView[]
+        }))).reverse() as StockInView[]
       };
 
       ctx.response.body = itemStockInsView;
     }
   }
 }
- 
-export const postItemStockIns = () => {
+
+export const postItemStockIns = () => { // Unused
   return async (ctx: RouterContext) => {
-    const body = await ((await ctx.request.body()).value) as StockInPostBody;
+    const body: StockInPostBody = await ctx.request.body({ type: "json" }).value;
 
     await Promise.all(
       body.stockIns.map(async stockIn => {
-        if(stockIn.id === 0) 
-          await db.stockIn.insert({...stockIn, itemId: body.item.id})
+        if (stockIn.id === 0)
+          await db.stockIn.insert({ ...stockIn, itemId: body.item.id })
         else
-          await db.stockIn.update({...stockIn, itemId: body.item.id})
+          await db.stockIn.update({ ...stockIn, itemId: body.item.id })
       })
     );
   }
 }
 
+export const addItemStockIns = () => { // Used
+  return async (ctx: RouterContext) => {
+    const body: StockIn = await ctx.request.body({ type: "json" }).value;
+
+    await db.stockIn.insert({ ...body });
+    // await Promise.all(
+    //   body.stockIns.map(async stockIn => {
+    //     if (stockIn.id === 0)
+    //       await db.stockIn.insert({ ...stockIn, itemId: body.item.id })
+    //     else
+    //       await db.stockIn.update({ ...stockIn, itemId: body.item.id })
+    //   })
+    // );
+
+    ctx.response.status = 201;
+  }
+}
+
 export const getTransactionsCsv = () => {
   return async (ctx: RouterContext) => {
-    
+
   }
 }
 
@@ -332,7 +360,7 @@ export const populate = () => {
         price: Number(obj.price),
         manufacturing_price: Number(obj.manufacturing_price)
       };
-      
+
       await db.item.insert(item);
     }
 
@@ -343,7 +371,7 @@ export const populate = () => {
 
       for await (const obj of readCSVObjects(stockInsCsv)) {
         const foundItem = await db.item.findOne(Where.from({ uid: `item-${obj.item_id}` }));
-  
+
         const stockIn = {
           id: 0,
           uid: `stockin-${obj.id}`,
@@ -352,13 +380,13 @@ export const populate = () => {
           qty: Number(obj.qty),
           project_id: projectId
         };
-  
+
         await db.stockIn.insert(stockIn);
-      }  
-    } catch(e) {
+      }
+    } catch (e) {
       console.error(e);
     }
-    
+
 
     // Transactions
     console.log("Populating transaction");
@@ -373,7 +401,7 @@ export const populate = () => {
         customPrice: obj.custom_price === "1" || obj.custom_price !== "0" ? Number(obj.custom_price) : 0,
         projectId: projectId
       };
-      
+
       // console.log(obj);
       await db.transaction.insert(transaction);
     }

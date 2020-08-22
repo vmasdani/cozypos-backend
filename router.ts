@@ -17,7 +17,8 @@ import {
   getItemStockIns, 
   postItemStockIns, 
   getTransactionsCsv, 
-  populate 
+  populate, 
+  addItemStockIns
 } from "./handler.ts";
 import * as base64 from "https://deno.land/x/base64@v0.2.0/mod.ts";
 
@@ -42,9 +43,10 @@ const save = (dbModel: BaseModel) => {
     console.log("Entity:", entity);
 
     if(entity.id === 0) {
-      ctx.response.body = await dbModel.insert(entity);
+      ctx.response.body = { id: await dbModel.insert(entity) };
     } else {
-      ctx.response.body = await dbModel.update(entity);
+      await dbModel.update(entity);
+      ctx.response.body = { id: entity.id }
     }
     ctx.response.status = 201;
   }
@@ -117,6 +119,7 @@ export function route(r: Router) {
     
     .get("/items/:id/stockins", getItemStockIns())
     .post("/items/:id/stockins", postItemStockIns())
+    .post("/items/:id/stockinsadd", addItemStockIns())
     .get("/itemstocks", getItemsStock())
     .get("/itemsearch", searchItems())
     .post("/itemsave", saveItem())

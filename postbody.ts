@@ -11,7 +11,7 @@ export interface ItemPostBody {
   item: Item,
   withInitialStock: boolean,
   initialStockQty: number,
-  project: Project
+  project: Project | null
 }
 
 export interface StockInPostBody {
