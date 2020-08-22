@@ -39,6 +39,20 @@ async function startOak() {
 
   route(r);
 
+  // MIddleware
+  app.use(async (ctx, next) => {
+    const noAuthPaths = [ "/login" ];
+    console.log("Requested!", ctx.request.url)
+
+    // Check if pathname is one of the noAuthPaths
+    if(noAuthPaths.map(url => ctx.request.url.pathname.includes(url)).filter(cond => cond).length > 0) {
+      console.log("No auth required!", ctx.request.url.pathname);
+      
+      await next();
+    } else {
+      await next(); 
+    }
+  })
   app.use(oakCors({
     origin: "*",
     allowedHeaders: "*",

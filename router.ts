@@ -71,8 +71,10 @@ export function route(r: Router) {
     })
     // Authentication
     .post("/login", async (ctx) => {
-      const loginInfo = await (await ctx.request.body()).value;
+      const loginInfo = await ctx.request.body({ type: "json" }).value;
       const hash = Deno.env.get("PASSWORD");
+
+      console.log("Login info & pw hash:", loginInfo, hash);
 
       if(loginInfo.password && hash) {
         const match = await bcrypt.compare(loginInfo.password, hash);
@@ -96,9 +98,14 @@ export function route(r: Router) {
     
         if(match) {
           ctx.response.body = apiKey;
+          ctx.response.status = 200;
         } else {
           ctx.response.status = 500;
+          ctx.response.body = "Password does not match.";
         }
+      } else {
+        ctx.response.status = 500; 
+        ctx.response.body = "Password empty or unknown error.";
       }
     })
     .get("/generate", async (ctx) => {
