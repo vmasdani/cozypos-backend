@@ -4,7 +4,7 @@ Requires=network.target
 After=network.target
 
 [Service]
-WorkingDirectory=/home/valianmasdani/cozyapi-backend
+WorkingDirectory=/home/valianmasdani/cozypos-backend
 ExecStart=/home/valianmasdani/.deno/bin/deno run --allow-net --allow-read --allow-env --unstable -c tsconfig.json main.ts
 
 [Install]
