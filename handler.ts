@@ -157,13 +157,15 @@ export const saveTransaction = () => {
     const body: TransactionPostBody = await ctx.request.body({ type: "json" }).value;
 
     // console.log("Body:", body);
+    const cashierName = ctx.request.headers.get("cashier");
+    // console.log("Cashier:", cashierName);
 
     const transactionId = await (async () => {
       if (body.transaction.id === 0) {
-        return await db.transaction.insert(body.transaction);
+        return await db.transaction.insert({...body.transaction, cashier: cashierName ? cashierName : "" });
       } else {
         try {
-          await db.transaction.update(body.transaction);
+          await db.transaction.update({...body.transaction, cashier: cashierName ? cashierName : ""});
         } catch(e) {
           console.error(e);
         }
@@ -171,7 +173,7 @@ export const saveTransaction = () => {
       }
     })();
 
-    console.log("Saved transaction ID:", transactionId);
+    // console.log("Saved transaction ID:", transactionId);
 
     if (transactionId) {
       await Promise.all(
@@ -243,7 +245,7 @@ export const saveItem = () => {
     // console.log("Saving item");
     const itemPostBody = await ctx.request.body({ type: "json" }).value as ItemPostBody;
 
-    console.log("itempost body", itemPostBody);
+    // console.log("itempost body", itemPostBody);
 
     if (itemPostBody?.item.id === 0) {
       try {

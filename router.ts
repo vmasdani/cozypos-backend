@@ -40,7 +40,7 @@ const findOne = (dbModel: BaseModel) => {
 const save = (dbModel: BaseModel) => {
   return async (ctx: RouterContext) => {
     const entity = await (await ctx.request.body()).value;
-    console.log("Entity:", entity);
+    // console.log("Entity:", entity);
 
     if(entity.id === 0) {
       ctx.response.body = { id: await dbModel.insert(entity) };
@@ -54,7 +54,7 @@ const save = (dbModel: BaseModel) => {
 
 const del = (dbModel: BaseModel) => {
   return async (ctx: RouterContext) => {
-    console.log("DELETE with id:", ctx.params.id);
+    // console.log("DELETE with id:", ctx.params.id);
 
     if(ctx.params.id) {
       await dbModel.delete(Where.from({ id: ctx.params.id }));
@@ -74,7 +74,7 @@ export function route(r: Router) {
       const loginInfo = await ctx.request.body({ type: "json" }).value;
       const hash = Deno.env.get("PASSWORD");
 
-      console.log("Login info & pw hash:", loginInfo, hash);
+      // console.log("Login info & pw hash:", loginInfo, hash);
 
       if(loginInfo.password && hash) {
         const match = await bcrypt.compare(loginInfo.password, hash);
@@ -88,7 +88,7 @@ export function route(r: Router) {
         // Replace API key
         const foundApiKey = await db.apiKey.findOne(Where.like("api_key", `${usernameBase64}%`));
 
-        console.log("Found api key:", foundApiKey);
+        // console.log("Found api key:", foundApiKey);
 
         if(foundApiKey) {
           await db.apiKey.update({ id: foundApiKey.id, apiKey: apiKey });

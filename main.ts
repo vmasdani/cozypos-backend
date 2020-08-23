@@ -42,8 +42,18 @@ async function startOak() {
   // MIddleware
   app.use(async (ctx, next) => {
     const noAuthPaths = [ "/login" ];
-    console.log("Requested!", ctx.request.url)
+    const apiKey = ctx.request.headers.get("authorization");
+    const cashier = apiKey 
+      ? apiKey.split(':').length > 0 
+          ? atob(apiKey.split(':')[0]) 
+          : ""
+      : "";
 
+    console.log("Requested!", ctx.request.url)
+    console.log("Auth header: ", cashier);
+
+    ctx.request.headers.set("cashier", cashier);
+      
     // Check if pathname is one of the noAuthPaths
     if(noAuthPaths.map(url => ctx.request.url.pathname.includes(url)).filter(cond => cond).length > 0) {
       console.log("No auth required!", ctx.request.url.pathname);
