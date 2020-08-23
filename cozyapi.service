@@ -9,7 +9,7 @@ Restart=always
 RestartSec=1
 User=root
 ExecStart=/home/valianmasdani/cozypos-backend/run.sh
-# WorkingDirectory=/home/valianmasdani/cozypos-backend
+WorkingDirectory=/home/valianmasdani/cozypos-backend
 
 [Install]
 WantedBy=multi-user.target
