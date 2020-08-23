@@ -1,15 +1,11 @@
 [Unit]
-Description=Cozypos API service
+Description=Cozy PoS API
+Requires=network.target
 After=network.target
-StartLimitIntervalSec=0
 
 [Service]
-Type=simple
-Restart=always
-RestartSec=1
-User=root
-ExecStart=/home/valianmasdani/cozypos-backend/run.sh
-WorkingDirectory=/home/valianmasdani/cozypos-backend
+WorkingDirectory=/home/valianmasdani/cozyapi-backend
+ExecStart=/home/valianmasdani/.deno/bin/deno run --allow-net --allow-read --allow-env --unstable -c tsconfig.json main.ts
 
 [Install]
 WantedBy=multi-user.target
