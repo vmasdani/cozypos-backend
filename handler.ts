@@ -63,7 +63,7 @@ export const getItemsStock = () => {
       const stockInAmount = itemStockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
 
       return {
-        item: { ...item } as Item,
+        item: item as Item,
         inStock: stockInAmount - soldAmount
       }
     }));
@@ -104,7 +104,7 @@ export const getProjects = () => {
       const projectIncome = transactionIncomes.reduce((acc, income) => acc + income, 0);
 
       const projectView: ProjectView = {
-        project: { ...project } as Project,
+        project: project as Project,
         income: projectIncome,
         totalManufacturingPrice: 0
       }
@@ -133,8 +133,8 @@ export const transactionView = () => {
         const item = await db.item.findById(itemTransaction.itemId ? itemTransaction.itemId : 0);
 
         return {
-          itemTransaction: { ...itemTransaction } as ItemTransaction,
-          item: { ...item } as Item
+          itemTransaction: itemTransaction as ItemTransaction,
+          item: item as Item
         }
       }));
 
@@ -142,7 +142,7 @@ export const transactionView = () => {
       // console.log("ItemTransactions:", itemTransactions);
 
       const transactionView: TransactionView = {
-        transaction: { ...transaction } as Transaction,
+        transaction: transaction as Transaction,
         itemTransactions: itemTransactionViews,
         totalPrice: 0
       };
@@ -228,7 +228,7 @@ export const searchItems = () => {
         const inQty = stockIns.reduce((acc, stockIn) => acc + (stockIn.qty ? stockIn.qty : 0), 0);
 
         return {
-          item: { ...foundItem } as Item,
+          item: foundItem as Item,
           inStock: inQty - outQty
         }
       }));
